@@ -5,8 +5,6 @@ import org.springframework.stereotype.Repository;
 
 import com.gym.system.model.Trainee;
 import com.gym.system.model.Trainer;
-import com.gym.system.util.PasswordGenerator;
-import com.gym.system.util.UsernameDuplicates;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,20 +19,13 @@ public class TraineeDAO {
     @PersistenceContext
     private EntityManager em;
 
-    private final UsernameDuplicates usernameDuplicates;
-
     private static final Logger logger = LoggerFactory.getLogger(TraineeDAO.class);
 
     @Autowired
-    public TraineeDAO(UsernameDuplicates usernameDuplicates) {
-        this.usernameDuplicates = usernameDuplicates;
+    public TraineeDAO() {
     }
 
     public void save(Trainee trainee){
-        String username = trainee.getFirstName() + "." + trainee.getLastName();
-        trainee.setUsername(usernameDuplicates.generateUniqueUsername(username));
-        trainee.setPassword(PasswordGenerator.generate());
-        trainee.setIsActive(true);
         logger.debug("Saving trainee in Database {}", trainee.getUsername());
         em.persist(trainee);
         em.flush();
@@ -57,7 +48,7 @@ public class TraineeDAO {
         .ifPresent(em::remove);
     }
 
-    public void updateTrainersList(Trainer trainer, String username, String password){
+    public void updateTrainersList(Trainer trainer, String username){
         Trainee trainee = em.createQuery(
             "SELECT t FROM Trainee t WHERE t.username = :username",
             Trainee.class
@@ -65,6 +56,16 @@ public class TraineeDAO {
         .getSingleResult();
 
         trainee.getTrainers().add(trainer);
+    }
+
+    public void updateTraineeTrainersList(String username, List<Trainer> trainers){
+        Trainee trainee = em.createQuery(
+            "SELECT t FROM Trainee t WHERE t.username = :username",
+            Trainee.class
+        ).setParameter("username", username)
+        .getSingleResult();
+
+        trainee.setTrainers(trainers);
     }
 
     public boolean toggleTraineeStatus(String username) {
@@ -80,8 +81,21 @@ public class TraineeDAO {
         return trainee.getIsActive();
     }
 
+    public Boolean activateDeactivateTrainee(String username, Boolean isActive) {
+
+        Trainee trainee = em.createQuery(
+            "SELECT t FROM Trainee t WHERE t.username = :username",
+            Trainee.class
+        ).setParameter("username", username)
+        .getSingleResult();
+
+        trainee.setIsActive(isActive);
+
+        return true;
+    }
+
     public Optional<Trainee> findByUsername(String username){
-        logger.debug("Finding trainee {}", username);
+        logger.info("Finding trainee {}", username);
         return em.createQuery(
             "SELECT t FROM Trainee t WHERE LOWER(t.username) = LOWER(:username)",
             Trainee.class

@@ -56,6 +56,10 @@ public class Trainee extends User {
         this.lastName = lastName;
     }
 
+    public String getFullName(){
+        return firstName + " " + lastName;
+    }
+
     public String getUsername(){
         return username;
     }
@@ -98,6 +102,14 @@ public class Trainee extends User {
 
     public List<Trainer> getTrainers(){
         return trainers;
+    }
+
+    public void addTrainer(Trainer trainer){
+        this.trainers.add(trainer);
+    }
+
+    public void setTrainers(List<Trainer> trainers){
+        this.trainers = trainers;
     }
 
     @Override

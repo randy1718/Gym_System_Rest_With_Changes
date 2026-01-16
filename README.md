@@ -1,4 +1,4 @@
-## Gym CRM System (Spring Core) WITH HIBERNATE
+## Gym CRM System (Spring Core) WITH HIBERNATE AND REST
 
 A simple Gym CRM system built using Spring Core (Java Config).  
 This project manages Trainees, Trainers, Training sessions, and basic in-memory persistence.

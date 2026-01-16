@@ -3,17 +3,31 @@ package com.gym.system.model;
 import java.util.ArrayList;
 import java.util.List;
 
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "trainers")
 @PrimaryKeyJoinColumn(name = "id")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Trainer extends User{
 
-    @Column
-    private String specialization;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+        name = "trainingType_id",
+        nullable = false,
+        foreignKey = @ForeignKey(name = "fk_trainer_specialization")
+    )
+    private TrainingType specialization;
 
-    @ManyToMany(mappedBy = "trainers")
+    @ManyToMany
+    @JoinTable(
+        name = "trainer_trainee",
+        joinColumns = @JoinColumn(name = "trainer_id"),
+        inverseJoinColumns = @JoinColumn(name = "trainee_id")
+    )
     private List<Trainee> trainees = new ArrayList<>();
 
     public Long getId(){
@@ -40,6 +54,10 @@ public class Trainer extends User{
         this.lastName = lastName;
     }
 
+    public String getFullName(){
+        return firstName + " " + lastName;
+    }
+
     public String getUsername(){
         return username;
     }
@@ -64,17 +82,25 @@ public class Trainer extends User{
         this.isActive = isActive;
     }
 
-    public String getSpecialization(){
+    public TrainingType getSpecialization(){
         return specialization;
     }
 
-    public void setSpecialization(String specialization){
+    public void setSpecialization(TrainingType specialization){
         this.specialization = specialization;
+    }
+
+    public List<Trainee> getTrainees(){
+        return trainees;
+    }
+
+    public void addTrainee(Trainee trainee){
+        this.trainees.add(trainee);
     }
 
     @Override
     public String toString() {
-        return "Trainee{" +
+        return "Trainer{" +
             "id='" + id + '\'' +
             ", firstName='" + firstName + '\'' +
             ", lastName='" + lastName + '\'' +

@@ -7,11 +7,26 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.gym.system.dto.ActivateDeactivateTraineeRequest;
+import com.gym.system.dto.DeleteTraineeRequest;
+import com.gym.system.dto.TraineeProfileRequest;
+import com.gym.system.dto.TraineeProfileResponse;
+import com.gym.system.dto.TraineeRegistrationRequest;
+import com.gym.system.dto.TraineeRegistrationResponse;
+import com.gym.system.dto.TraineeTrainersList;
+import com.gym.system.dto.UpdateTraineeRequest;
+import com.gym.system.dto.UpdateTraineeResponse;
+import com.gym.system.dto.UpdateTrainersListRequest;
+import com.gym.system.dto.UpdateTrainersListResponse;
+import com.gym.system.dto.UpdatedTrainersList;
 import com.gym.system.model.Trainee;
 import com.gym.system.model.Trainer;
 import com.gym.system.repository.TraineeDAO;
+import com.gym.system.repository.TrainerDAO;
+import com.gym.system.util.PasswordGenerator;
 
 import jakarta.transaction.Transactional;
+import com.gym.system.util.UsernameDuplicates;
 
 @Service
 @Transactional
@@ -19,10 +34,14 @@ public class TraineeService {
 
     private static final Logger logger = LoggerFactory.getLogger(TraineeService.class);
     private final TraineeDAO traineeDAO;
+    private final TrainerDAO trainerDAO;
+    private final UsernameDuplicates usernameDuplicates;
 
     @Autowired
-    public  TraineeService(TraineeDAO traineeDAO) { 
+    public  TraineeService(TraineeDAO traineeDAO, TrainerDAO trainerDAO, UsernameDuplicates usernameDuplicates) { 
         this.traineeDAO = traineeDAO;
+        this.trainerDAO = trainerDAO;
+        this.usernameDuplicates = usernameDuplicates;
     }
 
     public boolean authenticate(String username, String password) {
@@ -70,9 +89,19 @@ public class TraineeService {
         }
     }
 
-    public void create(Trainee t){
+    public TraineeRegistrationResponse  create(TraineeRegistrationRequest tt){
+        Trainee t = new Trainee();
+        t.setFirstName(tt.getFirstName());
+        t.setLastName(tt.getLastName());
+        t.setDateOfBirth(tt.getDateOfBirth());
+        t.setAddress(tt.getAddress());
+        String username = tt.getFirstName() + "." + tt.getLastName();
+        t.setUsername(usernameDuplicates.generateUniqueUsername(username));
+        t.setPassword(PasswordGenerator.generate());
+        t.setIsActive(true);
         logger.info("Service: Creating trainee {} {}", t.getFirstName(), t.getLastName());
         traineeDAO.save(t);
+        return new TraineeRegistrationResponse(t.getUsername(), t.getPassword());
     }
 
     public void update(String username, String password, Trainee t){
@@ -93,7 +122,7 @@ public class TraineeService {
         Boolean isAuthenticated = authenticate(traineeUsername, traineePassword);
 
         if(isAuthenticated){
-            traineeDAO.updateTrainersList(trainer, traineeUsername, traineePassword);
+            traineeDAO.updateTrainersList(trainer, traineeUsername);
         }else{
             throw new IllegalArgumentException("Invalid credentials");
         }
@@ -134,6 +163,120 @@ public class TraineeService {
         }else{
             throw new IllegalArgumentException("Invalid credentials");
         }
+    }
+
+    public Boolean deleteTraineeProfile(DeleteTraineeRequest request){
+        logger.info("Service: Deleting trainee with username {}", request.getUsername());
+        Trainee trainee = traineeDAO.findByUsername(request.getUsername())
+            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        traineeDAO.delete(request.getUsername());
+
+        return true;
+    }
+
+    public TraineeProfileResponse getTraineeProfile(TraineeProfileRequest request){
+        logger.info("Service: Getting profile for trainee {}", request.getUsername());
+
+        Trainee trainee = traineeDAO.findByUsername(request.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        TraineeProfileResponse response = new TraineeProfileResponse();
+        response.setFirstName(trainee.getFirstName());
+        response.setLastName(trainee.getLastName());
+        response.setDateOfBirth(trainee.getDateOfBirth());
+        response.setAddress(trainee.getAddress());
+        response.setIsActive(trainee.getIsActive());
+        List<TraineeTrainersList> trainers = trainee.getTrainers().stream()
+        .map(t -> {
+            TraineeTrainersList dto = new TraineeTrainersList();
+            dto.setUsername(t.getUsername());
+            dto.setFirstName(t.getFirstName());
+            dto.setLastName(t.getLastName());
+            dto.setSpecialization(t.getSpecialization().getName());
+            return dto;
+        })
+        .toList();
+        response.setTrainers(trainers);
+
+        return response;
+    }
+
+    public UpdateTraineeResponse updateTraineeProfile(UpdateTraineeRequest request){
+        logger.info("Service: Updating profile for trainee {}", request.getUsername());
+
+        Trainee trainee = traineeDAO.findByUsername(request.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        trainee.setFirstName(request.getFirstName());
+        trainee.setLastName(request.getLastName());
+        if(request.getDateOfBirth() != null) trainee.setDateOfBirth(request.getDateOfBirth());
+        if(request.getAddress() != null) trainee.setAddress(request.getAddress());
+        trainee.setIsActive(request.getIsActive());
+
+        traineeDAO.update(trainee);
+
+        Trainee updatedTrainee = traineeDAO.findByUsername(request.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        UpdateTraineeResponse response = new UpdateTraineeResponse();
+        response.setUsername(updatedTrainee.getUsername());
+        response.setFirstName(updatedTrainee.getFirstName());
+        response.setLastName(updatedTrainee.getLastName());
+        response.setDateOfBirth(updatedTrainee.getDateOfBirth());
+        response.setAddress(updatedTrainee.getAddress());
+        response.setIsActive(updatedTrainee.getIsActive());
+        List<TraineeTrainersList> trainers = updatedTrainee.getTrainers().stream()
+        .map(t -> {
+            TraineeTrainersList dto = new TraineeTrainersList();
+            dto.setUsername(t.getUsername());
+            dto.setFirstName(t.getFirstName());
+            dto.setLastName(t.getLastName());
+            dto.setSpecialization(t.getSpecialization().getName());
+            return dto;
+        })
+        .toList();
+        response.setTrainers(trainers);
+
+        return response;
+    }
+
+    public UpdateTrainersListResponse UpdateTraineeTrainersList(UpdateTrainersListRequest request){
+        logger.info("Service: Updating trainers list for trainee {}", request.getUsername());
+
+        Trainee trainee = traineeDAO.findByUsername(request.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        List<UpdatedTrainersList> trainersToAdd = request.getTrainers();
+        List<Trainer> updatedTrainers = new ArrayList<>();
+        for(UpdatedTrainersList updatedTrainer : trainersToAdd){
+            Trainer trainer = trainerDAO.findByUsername(updatedTrainer.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Trainer not found"));
+            updatedTrainers.add(trainer);
+        }
+        traineeDAO.updateTraineeTrainersList(trainee.getUsername(), updatedTrainers);
+        UpdateTrainersListResponse response = new UpdateTrainersListResponse();
+        List<TraineeTrainersList> updatedTrainersList = trainee.getTrainers().stream()
+        .map(t -> {
+            TraineeTrainersList dto = new TraineeTrainersList();
+            dto.setUsername(t.getUsername());
+            dto.setFirstName(t.getFirstName());
+            dto.setLastName(t.getLastName());
+            dto.setSpecialization(t.getSpecialization().getName());
+            return dto;
+        })
+         .toList();
+        response.setUpdatedTrainers(updatedTrainersList);
+        return response;
+    }
+
+    public Boolean activateDeactivateTrainee(ActivateDeactivateTraineeRequest request){
+        logger.info("Service: Activating/Deactivating trainee {}", request.getUsername());
+
+        Trainee trainee = traineeDAO.findByUsername(request.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        return traineeDAO.activateDeactivateTrainee(trainee.getUsername(), request.getIsActive());
     }
 
     public List<Trainee> findAll(){

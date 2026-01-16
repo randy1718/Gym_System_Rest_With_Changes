@@ -5,6 +5,33 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
+import com.gym.system.dto.ActivateDeactivateTraineeRequest;
+import com.gym.system.dto.ActivateDeactivateTrainerRequest;
+import com.gym.system.dto.AddTrainingRequest;
+import com.gym.system.dto.ChangeLoginRequest;
+import com.gym.system.dto.DeleteTraineeRequest;
+import com.gym.system.dto.LoginRequest;
+import com.gym.system.dto.TraineeProfileRequest;
+import com.gym.system.dto.TraineeProfileResponse;
+import com.gym.system.dto.TraineeRegistrationRequest;
+import com.gym.system.dto.TraineeRegistrationResponse;
+import com.gym.system.dto.TraineeTrainingsListRequest;
+import com.gym.system.dto.TraineeTrainingsListResponse;
+import com.gym.system.dto.TrainerProfileRequest;
+import com.gym.system.dto.TrainerProfileResponse;
+import com.gym.system.dto.TrainerRegistrationRequest;
+import com.gym.system.dto.TrainerRegistrationResponse;
+import com.gym.system.dto.TrainerTrainingsListRequest;
+import com.gym.system.dto.TrainerTrainingsListResponse;
+import com.gym.system.dto.TrainingTypesResponse;
+import com.gym.system.dto.UnassignedTrainersRequest;
+import com.gym.system.dto.UnassignedTrainersResponse;
+import com.gym.system.dto.UpdateTraineeRequest;
+import com.gym.system.dto.UpdateTraineeResponse;
+import com.gym.system.dto.UpdateTrainerRequest;
+import com.gym.system.dto.UpdateTrainerResponse;
+import com.gym.system.dto.UpdateTrainersListRequest;
+import com.gym.system.dto.UpdateTrainersListResponse;
 import com.gym.system.model.*;
 
 @Component
@@ -13,20 +40,26 @@ public class GymServices {
     private final TrainerService trainerService;
     private final TrainingService trainingService;
     private final TrainingTypeService trainingTypeService;
+    private final AuthService AuthService;
 
-    public GymServices(TraineeService traineeService, TrainerService trainerService, TrainingService trainingService, TrainingTypeService trainingTypeService) {
+    public GymServices(TraineeService traineeService, 
+                       TrainerService trainerService, 
+                       TrainingService trainingService, 
+                       TrainingTypeService trainingTypeService,
+                       AuthService AuthService) {
         this.traineeService = traineeService;
         this.trainerService = trainerService;
         this.trainingService = trainingService;
         this.trainingTypeService = trainingTypeService;
+        this.AuthService = AuthService;
     }
 
-    public void createTrainee(Trainee t){
-        traineeService.create(t);
+    public TraineeRegistrationResponse  createTrainee(TraineeRegistrationRequest t){
+       return traineeService.create(t);
     }
 
-    public void createTrainer(Trainer t){
-        trainerService.create(t);
+    public TrainerRegistrationResponse createTrainer(TrainerRegistrationRequest t){
+        return trainerService.create(t);
     }
 
     public void createTrainingType(TrainingType t){
@@ -67,6 +100,14 @@ public class GymServices {
 
     public Optional<Trainee> findTraineeByUsername(String username, String password){
         return traineeService.findByUsername(username, password);
+    }
+
+    public TraineeProfileResponse getTrainee(TraineeProfileRequest request){
+        return traineeService.getTraineeProfile(request);
+    }
+
+    public TrainerProfileResponse getTrainer(TrainerProfileRequest request){
+        return trainerService.getTrainerProfile(request);
     }
 
     public Optional<Trainer> findTrainerByUsername(String username, String password){
@@ -117,6 +158,14 @@ public class GymServices {
         return traineeService.authenticate(username, password);
     }
 
+    public Boolean login(LoginRequest loginRequest){
+        return AuthService.authenticate(loginRequest.getUsername(), loginRequest.getPassword());
+    }
+
+    public Boolean changeLogin(ChangeLoginRequest  changeLoginRequest){
+        return AuthService.changeLogin(changeLoginRequest.getUsername(), changeLoginRequest.getOldPassword(), changeLoginRequest.getNewPassword());
+    }
+
     public Boolean authenticateTrainer(String username, String password){
         return trainerService.authenticate(username, password);
     }
@@ -125,4 +174,47 @@ public class GymServices {
         traineeService.updateTrainersList(trainer, traineeUsername, traineePassword);
     }
 
+    public UpdateTraineeResponse updateTrainee(UpdateTraineeRequest request){
+        return traineeService.updateTraineeProfile(request);
+    }
+
+    public UpdateTrainerResponse updateTrainer(UpdateTrainerRequest request){
+        return trainerService.updateTrainerProfile(request);
+    }
+
+    public Boolean deleteTrainee(DeleteTraineeRequest request){
+        return traineeService.deleteTraineeProfile(request);
+    }
+
+    public TrainingTypesResponse getTrainingTypes(){
+        return trainingTypeService.getTrainingTypes();
+    }
+
+    public UnassignedTrainersResponse getUnassignedTrainers(UnassignedTrainersRequest request){
+        return trainingService.findUnassignedTrainers(request);
+    }
+
+    public UpdateTrainersListResponse UpdateTraineeTrainersList(UpdateTrainersListRequest request){
+        return traineeService.UpdateTraineeTrainersList(request);
+    }
+
+    public Boolean activateDeactivateTrainee(ActivateDeactivateTraineeRequest request){
+        return traineeService.activateDeactivateTrainee(request);
+    }
+
+    public Boolean activateDeactivateTrainer(ActivateDeactivateTrainerRequest request){
+        return trainerService.activateDeactivateTrainer(request);
+    }
+
+    public Boolean addTraining(AddTrainingRequest request){
+        return trainingService.addTraining(request);
+    }
+
+    public TraineeTrainingsListResponse getTraineeTrainingsList(TraineeTrainingsListRequest request){
+        return trainingService.getTraineeTrainingsList(request);
+    }
+
+    public TrainerTrainingsListResponse getTrainerTrainingsList(TrainerTrainingsListRequest request){
+        return trainingService.getTrainerTrainingsList(request);
+    }
 }

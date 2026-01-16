@@ -41,10 +41,17 @@ public class DatabaseInitService {
             return;
         }
 
+        JsonNode trainingTypeArray = rootNode.get("trainingTypes");
         JsonNode traineeArray = rootNode.get("trainees");
         JsonNode trainerArray = rootNode.get("trainers");
-        JsonNode trainingTypeArray = rootNode.get("trainingTypes");
         JsonNode trainingArray = rootNode.get("trainings");
+
+        if (trainingTypeArray != null && trainingTypeArray.isArray()) {
+            for (JsonNode node : trainingTypeArray) {
+                TrainingType tt = mapper.convertValue(node, TrainingType.class);
+                em.persist(tt);
+            }
+        }
 
         if (traineeArray != null && traineeArray.isArray()) {
             for (JsonNode node : traineeArray) {
@@ -65,21 +72,21 @@ public class DatabaseInitService {
             for (JsonNode node : trainerArray) {
                 Trainer t = mapper.convertValue(node, Trainer.class);
 
-                // ensure required fields
-                t.setId(null);
+                String specializationName = node.get("specializationName").asText();
                 String username = t.getFirstName() + "." + t.getLastName();
+
+                t.setId(null);
+                TrainingType specialization = em.createQuery(
+                        "SELECT tt FROM TrainingType tt WHERE tt.name = :name",
+                        TrainingType.class)
+                        .setParameter("name", specializationName)
+                        .getSingleResult();
+                t.setSpecialization(specialization);
                 t.setUsername(usernameDuplicates.generateUniqueUsername(username));
                 t.setPassword(PasswordGenerator.generate());
                 t.setIsActive(true);
 
                 em.persist(t);
-            }
-        }
-
-        if (trainingTypeArray != null && trainingTypeArray.isArray()) {
-            for (JsonNode node : trainingTypeArray) {
-                TrainingType tt = mapper.convertValue(node, TrainingType.class);
-                em.persist(tt);
             }
         }
 
@@ -108,6 +115,8 @@ public class DatabaseInitService {
                         .setParameter("name", typeName)
                         .getSingleResult();
                 Training training = new Training();
+                trainee.addTrainer(trainer);
+                trainer.addTrainee(trainee);
                 training.setTrainee(trainee);
                 training.setTrainer(trainer);
                 training.setTrainingType(trainingType);

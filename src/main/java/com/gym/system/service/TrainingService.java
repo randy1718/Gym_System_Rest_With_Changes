@@ -8,6 +8,16 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.gym.system.dto.AddTrainingRequest;
+import com.gym.system.dto.TraineeTrainingsListRequest;
+import com.gym.system.dto.TraineeTrainingsListResponse;
+import com.gym.system.dto.TrainerTrainingList;
+import com.gym.system.dto.TrainerTrainingsListRequest;
+import com.gym.system.dto.TrainerTrainingsListResponse;
+import com.gym.system.dto.TrainingList;
+import com.gym.system.dto.UnassignedTrainersList;
+import com.gym.system.dto.UnassignedTrainersRequest;
+import com.gym.system.dto.UnassignedTrainersResponse;
 import com.gym.system.model.Trainee;
 import com.gym.system.model.Trainer;
 import com.gym.system.model.Training;
@@ -81,6 +91,34 @@ public class TrainingService {
         }
     }
 
+    public Boolean addTraining(AddTrainingRequest request){
+        logger.info("Service: Adding training for trainee {} with trainer {}",
+                request.getTraineeUsername(), request.getTrainerUsername());
+
+        Optional<Trainer> foundTrainer = trainerDAO.findByUsername(request.getTrainerUsername());
+        if (!foundTrainer.isPresent()) {
+            logger.error("Service: Trainer {} does not exist", request.getTrainerUsername());
+            throw new IllegalArgumentException("Trainer Username does not exist");
+        }
+
+        Optional<Trainee> foundTrainee = traineeDAO.findByUsername(request.getTraineeUsername());
+        if (!foundTrainee.isPresent()) {
+            logger.error("Service: Trainee {} does not exist", request.getTraineeUsername());
+            throw new IllegalArgumentException("Trainee Username does not exist");
+        }
+
+        Training training = new Training();
+        training.setTrainee(foundTrainee.get());
+        training.setTrainer(foundTrainer.get());
+        training.setTrainingName(request.getTrainingName());
+        training.setTrainingType(foundTrainer.get().getSpecialization());
+        training.setDate(request.getTrainingDate());
+        training.setDuration(request.getTrainingDuration());
+
+        trainingDAO.save(training);
+        return true;
+    }
+
     public Optional<Training> findById(String id){
         logger.info("Service: Fetching training with id {}", id);
         return trainingDAO.findById(id);
@@ -121,6 +159,24 @@ public class TrainingService {
         }
     }
 
+    public UnassignedTrainersResponse findUnassignedTrainers(UnassignedTrainersRequest request){
+        logger.info("Service: Retrieving unassigned trainers");
+        List<Trainer> unassignedTrainers = trainingDAO.findUnassignedTrainers(request.getUsername());
+        List<UnassignedTrainersList> response = unassignedTrainers.stream()
+            .map(trainer -> {
+                UnassignedTrainersList dto = new UnassignedTrainersList();
+                dto.setUsername(trainer.getUsername());
+                dto.setFirstName(trainer.getFirstName());
+                dto.setLastName(trainer.getLastName());
+                dto.setSpecialization(trainer.getSpecialization().getName());
+                return dto;
+            })
+            .toList();
+        UnassignedTrainersResponse responseObj = new UnassignedTrainersResponse();
+        responseObj.setUnassignedTrainers(response);
+        return responseObj;
+    }
+
     public Optional<Training> findByTraineeUsernameAndDate(String username, String password, String date){
         logger.info("Service: Fetching training for trainee {} on date {}", username, date);
         Boolean isAuthenticated = AuthService.authenticate(username, password);
@@ -131,6 +187,50 @@ public class TrainingService {
             throw new IllegalArgumentException("Invalid credentials");
         }
         
+    }
+
+    public TraineeTrainingsListResponse getTraineeTrainingsList(TraineeTrainingsListRequest request){
+        logger.info("Service: Fetching trainings for trainee {}", request.getUsername());
+        Trainee trainee = traineeDAO.findByUsername(request.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        List<Training> trainings = trainingDAO.findTraineeTrainings(request);
+        List<TrainingList> trainingsList = trainings.stream()
+        .map(t -> {
+            TrainingList dto = new TrainingList();
+            dto.setTrainingName(t.getTrainingName());
+            dto.setTrainingDate(t.getDate());
+            dto.setTrainingType(t.getTrainingType().getName());
+            dto.setDuration(t.getDuration());
+            dto.setTrainerName(t.getTrainer().getFullName());
+            return dto;
+        })
+         .toList();
+        TraineeTrainingsListResponse response = new TraineeTrainingsListResponse();
+        response.setTrainings(trainingsList);
+        return response;
+    }
+
+    public TrainerTrainingsListResponse getTrainerTrainingsList(TrainerTrainingsListRequest request){
+        logger.info("Service: Fetching trainings for trainer {}", request.getUsername());
+        Trainer trainer = trainerDAO.findByUsername(request.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        List<Training> trainings = trainingDAO.findTrainerTrainings(request);
+        List<TrainerTrainingList> trainingsList = trainings.stream()
+        .map(t -> {
+            TrainerTrainingList dto = new TrainerTrainingList();
+            dto.setTrainingName(t.getTrainingName());
+            dto.setTrainingDate(t.getDate());
+            dto.setTrainingType(t.getTrainingType().getName());
+            dto.setDuration(t.getDuration());
+            dto.setTraineeName(t.getTrainee().getFullName());
+            return dto;
+        })
+         .toList();
+        TrainerTrainingsListResponse response = new TrainerTrainingsListResponse();
+        response.setTrainings(trainingsList);
+        return response;
     }
 
     public List<Training> findAll(){

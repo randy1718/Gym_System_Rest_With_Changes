@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.gym.system.dto.TrainingTypesResponse;
 import com.gym.system.model.TrainingType;
 import com.gym.system.repository.TrainingTypeDAO;
 
@@ -39,5 +40,14 @@ public class TrainingTypeService {
     public List<TrainingType> findAll(){
         logger.info("Service: Retrieving all training Types from Database");
         return trainingTypeDAO.findAll();
+    }
+
+    public TrainingTypesResponse getTrainingTypes(){
+        logger.info("Service: Getting all training types");
+        List<TrainingType> trainingTypes = trainingTypeDAO.findAll();
+
+        TrainingTypesResponse response = new TrainingTypesResponse();
+        response.setTrainingTypes(trainingTypes);
+        return response;
     }
 }
