@@ -4,6 +4,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.gym.system.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -15,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gym.system.controller.AddTrainingController;
 import com.gym.system.dto.AddTrainingRequest;
 import com.gym.system.service.GymServices;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 public class AddTrainingControllerTest {
     private MockMvc mockMvc;
@@ -27,8 +29,13 @@ public class AddTrainingControllerTest {
         AddTrainingController controller =
                 new AddTrainingController(facade);
 
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setValidator(validator)
                 .build();
 
         objectMapper = new ObjectMapper();
@@ -54,5 +61,61 @@ public class AddTrainingControllerTest {
                         .content(objectMapper.writeValueAsString(request))
         )
         .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldReturn400_WhenTraineeUsernameIsMissing() throws Exception {
+
+        AddTrainingRequest request = new AddTrainingRequest();
+        request.setTrainerUsername("Ana.Lopez");
+        request.setTrainingDate("2026-01-08 10:00:00");
+        request.setTrainingDuration(60);
+        request.setTrainingName("Full Body Workout");
+
+        mockMvc.perform(
+                        post("/addTraining")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn400_WhenTrainingDurationIsInvalid() throws Exception {
+
+        AddTrainingRequest request = new AddTrainingRequest();
+        request.setTraineeUsername("Alex.Perez");
+        request.setTrainerUsername("Ana.Lopez");
+        request.setTrainingDate("2026-01-08 10:00:00");
+        request.setTrainingDuration(0);
+        request.setTrainingName("Workout");
+
+        mockMvc.perform(
+                        post("/addTraining")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn404_WhenTraineeDoesNotExist() throws Exception {
+
+        AddTrainingRequest request = new AddTrainingRequest();
+        request.setTraineeUsername("Ghost.User");
+        request.setTrainerUsername("Ana.Lopez");
+        request.setTrainingDate("2026-01-08 10:00:00");
+        request.setTrainingDuration(60);
+        request.setTrainingName("Workout");
+
+        when(facade.addTraining(Mockito.any()))
+                .thenThrow(new jakarta.persistence.EntityNotFoundException("Trainee not found"));
+
+        mockMvc.perform(
+                        post("/addTraining")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isNotFound());
     }
 }

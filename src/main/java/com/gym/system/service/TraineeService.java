@@ -2,6 +2,7 @@ package com.gym.system.service;
 
 import java.util.*;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -181,32 +182,38 @@ public class TraineeService {
         Trainee trainee = traineeDAO.findByUsername(request.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        TraineeProfileResponse response = new TraineeProfileResponse();
-        response.setFirstName(trainee.getFirstName());
-        response.setLastName(trainee.getLastName());
-        response.setDateOfBirth(trainee.getDateOfBirth());
-        response.setAddress(trainee.getAddress());
-        response.setIsActive(trainee.getIsActive());
-        List<TraineeTrainersList> trainers = trainee.getTrainers().stream()
-        .map(t -> {
-            TraineeTrainersList dto = new TraineeTrainersList();
-            dto.setUsername(t.getUsername());
-            dto.setFirstName(t.getFirstName());
-            dto.setLastName(t.getLastName());
-            dto.setSpecialization(t.getSpecialization().getName());
-            return dto;
-        })
-        .toList();
-        response.setTrainers(trainers);
+        boolean isAuthenticated = authenticate(request.getUsername(), request.getPassword());
 
-        return response;
+        if(isAuthenticated) {
+            TraineeProfileResponse response = new TraineeProfileResponse();
+            response.setFirstName(trainee.getFirstName());
+            response.setLastName(trainee.getLastName());
+            response.setDateOfBirth(trainee.getDateOfBirth());
+            response.setAddress(trainee.getAddress());
+            response.setIsActive(trainee.getIsActive());
+            List<TraineeTrainersList> trainers = trainee.getTrainers().stream()
+                    .map(t -> {
+                        TraineeTrainersList dto = new TraineeTrainersList();
+                        dto.setUsername(t.getUsername());
+                        dto.setFirstName(t.getFirstName());
+                        dto.setLastName(t.getLastName());
+                        dto.setSpecialization(t.getSpecialization().getName());
+                        return dto;
+                    })
+                    .toList();
+            response.setTrainers(trainers);
+
+            return response;
+        }else{
+            throw new IllegalArgumentException("Invalid credentials");
+        }
     }
 
     public UpdateTraineeResponse updateTraineeProfile(UpdateTraineeRequest request){
         logger.info("Service: Updating profile for trainee {}", request.getUsername());
 
         Trainee trainee = traineeDAO.findByUsername(request.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         trainee.setFirstName(request.getFirstName());
         trainee.setLastName(request.getLastName());
@@ -217,7 +224,7 @@ public class TraineeService {
         traineeDAO.update(trainee);
 
         Trainee updatedTrainee = traineeDAO.findByUsername(request.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         UpdateTraineeResponse response = new UpdateTraineeResponse();
         response.setUsername(updatedTrainee.getUsername());

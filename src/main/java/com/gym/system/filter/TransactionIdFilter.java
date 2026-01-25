@@ -31,13 +31,14 @@ public class TransactionIdFilter extends OncePerRequestFilter {
 
         MDC.put(TRANSACTION_ID, transactionId);
 
-        // propagate to response
         response.setHeader(TRANSACTION_ID, transactionId);
 
         try {
+            logger.info("-----Transaction started-----");
             filterChain.doFilter(request, response);
         } finally {
-            MDC.clear(); // VERY IMPORTANT
+            logger.info("-----Transaction completed-----");
+            MDC.clear();
         }
     }
 }

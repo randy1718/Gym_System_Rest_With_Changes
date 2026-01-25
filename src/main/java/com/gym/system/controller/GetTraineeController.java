@@ -1,5 +1,9 @@
 package com.gym.system.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,6 +16,7 @@ import com.gym.system.service.GymServices;
 
 import jakarta.validation.Valid;
 
+@Tag(name = "Get trainee's information", description = "Endpoint to get the information of a trainee")
 @RestController
 @RequestMapping("/getTrainee")
 public class GetTraineeController {
@@ -21,6 +26,12 @@ public class GetTraineeController {
         this.facade = facade;
     }
 
+    @Operation(description = "Get the information of a trainee by providing their username and password")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "The information of the trainee is retrieved correctly"),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "500", description = "Invalid server error")
+    })
     @GetMapping
     public ResponseEntity<TraineeProfileResponse> getTrainee(
             @Valid @RequestBody TraineeProfileRequest request) {

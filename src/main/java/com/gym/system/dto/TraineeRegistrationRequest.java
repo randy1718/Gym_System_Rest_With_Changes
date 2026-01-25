@@ -40,8 +40,6 @@ public class TraineeRegistrationRequest {
     }
 
     public void setDateOfBirth(LocalDate dateOfBirth) {
-        //DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        //this.dateOfBirth = LocalDate.parse(dateOfBirth, formatter);
         this.dateOfBirth = dateOfBirth;
     }
 

@@ -8,7 +8,7 @@ public class ActivateDeactivateTrainerRequest {
     private String username;
 
     @NotNull
-    private Boolean isActive;
+    private boolean isActive;
 
     public String getUsername() {
         return username;
@@ -18,11 +18,11 @@ public class ActivateDeactivateTrainerRequest {
         this.username = username;
     }
 
-    public Boolean getIsActive() {
+    public boolean getIsActive() {
         return isActive;
     }
 
-    public void setIsActive(Boolean isActive) {
+    public void setIsActive(boolean isActive) {
         this.isActive = isActive;
     }
 }

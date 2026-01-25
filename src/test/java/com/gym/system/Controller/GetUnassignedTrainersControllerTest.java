@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gym.system.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -23,6 +24,7 @@ import com.gym.system.dto.UnassignedTrainersList;
 import com.gym.system.dto.UnassignedTrainersRequest;
 import com.gym.system.dto.UnassignedTrainersResponse;
 import com.gym.system.service.GymServices;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 public class GetUnassignedTrainersControllerTest {
     private MockMvc mockMvc;
@@ -35,8 +37,13 @@ public class GetUnassignedTrainersControllerTest {
         GetUnassignedTrainersController controller =
                 new GetUnassignedTrainersController(facade);
 
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setValidator(validator)
                 .build();
 
         objectMapper = new ObjectMapper();
@@ -76,5 +83,33 @@ public class GetUnassignedTrainersControllerTest {
         .andExpect(jsonPath("$.unassignedTrainers[0].lastName").value("Agudelo"))
         .andExpect(jsonPath("$.unassignedTrainers[0].specialization").value("Cardio"))
         .andExpect(jsonPath("$.unassignedTrainers[0].username").value("Luis.Agudelo"));
+    }
+
+    @Test
+    void shouldReturn400_WhenUsernameIsMissing() throws Exception {
+
+        UnassignedTrainersRequest request = new UnassignedTrainersRequest();
+        // username NOT set
+
+        mockMvc.perform(
+                        get("/getUnassignedTrainers")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn400_WhenUsernameIsEmpty() throws Exception {
+
+        UnassignedTrainersRequest request = new UnassignedTrainersRequest();
+        request.setUsername("");
+
+        mockMvc.perform(
+                        get("/getUnassignedTrainers")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
     }
 }

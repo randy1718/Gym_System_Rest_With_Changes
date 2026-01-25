@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.validation.Validator;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -26,6 +28,11 @@ public class WebConfig implements WebMvcConfigurer {
         mapper.registerModule(new JavaTimeModule());
 
         converters.add(new MappingJackson2HttpMessageConverter(mapper));
+    }
+
+    @Override
+    public Validator getValidator() {
+        return new LocalValidatorFactoryBean();
     }
 
     @Override

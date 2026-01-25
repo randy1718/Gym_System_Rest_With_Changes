@@ -4,6 +4,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.gym.system.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -15,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gym.system.controller.ActivateDeactivateTrainerController;
 import com.gym.system.dto.ActivateDeactivateTrainerRequest;
 import com.gym.system.service.GymServices;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 public class ActivateDeactivateTrainerControllerTest {
     private MockMvc mockMvc;
@@ -27,8 +29,13 @@ public class ActivateDeactivateTrainerControllerTest {
         ActivateDeactivateTrainerController controller =
                 new ActivateDeactivateTrainerController(facade);
 
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setValidator(validator)
                 .build();
 
         objectMapper = new ObjectMapper();
@@ -51,5 +58,35 @@ public class ActivateDeactivateTrainerControllerTest {
                         .content(objectMapper.writeValueAsString(request))
         )
         .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldReturn400_WhenIsActiveIsMissing() throws Exception {
+        ActivateDeactivateTrainerRequest request = new ActivateDeactivateTrainerRequest();
+        request.setUsername("Jonny.Diaz");
+
+        mockMvc.perform(
+                        patch("/activateDeactivateTrainer")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn404_WhenTrainerDoesNotExist() throws Exception {
+        ActivateDeactivateTrainerRequest request = new ActivateDeactivateTrainerRequest();
+        request.setUsername("Unknown.User");
+        request.setIsActive(true);
+
+        when(facade.activateDeactivateTrainer(Mockito.any()))
+                .thenThrow(new jakarta.persistence.EntityNotFoundException("Trainee not found"));
+
+        mockMvc.perform(
+                        patch("/activateDeactivateTrainer")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isNotFound());
     }
 }

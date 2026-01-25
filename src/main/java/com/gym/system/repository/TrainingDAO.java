@@ -80,9 +80,9 @@ public class TrainingDAO {
 
     public List<Training> findTraineeTrainings(TraineeTrainingsListRequest request) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        LocalDateTime formattedFromDate = request.getFrom() != null ? LocalDateTime.parse(request.getFrom(), formatter)
+        LocalDateTime formattedFromDate = request.getFrom() != null ? LocalDateTime.parse(request.getFrom().toString(), formatter)
                 : null;
-        LocalDateTime formattedToDate = request.getTo() != null ? LocalDateTime.parse(request.getTo(), formatter)
+        LocalDateTime formattedToDate = request.getTo() != null ? LocalDateTime.parse(request.getTo().toString(), formatter)
                 : null;
         StringBuilder jpql = new StringBuilder(
                 "SELECT t FROM Training t WHERE t.trainee.username = :username");
@@ -128,9 +128,9 @@ public class TrainingDAO {
 
     public List<Training> findTrainerTrainings(TrainerTrainingsListRequest request) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        LocalDateTime formattedFromDate = request.getFrom() != null ? LocalDateTime.parse(request.getFrom(), formatter)
+        LocalDateTime formattedFromDate = request.getFrom() != null ? LocalDateTime.parse(request.getFrom().toString(), formatter)
                 : null;
-        LocalDateTime formattedToDate = request.getTo() != null ? LocalDateTime.parse(request.getTo(), formatter)
+        LocalDateTime formattedToDate = request.getTo() != null ? LocalDateTime.parse(request.getTo().toString(), formatter)
                 : null;
         StringBuilder jpql = new StringBuilder(
                 "SELECT t FROM Training t WHERE t.trainer.username = :username");

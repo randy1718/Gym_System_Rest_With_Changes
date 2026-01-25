@@ -112,6 +112,10 @@ public class Trainee extends User {
         this.trainers = trainers;
     }
 
+    public List<Training> getTrainings() {
+        return trainings;
+    }
+
     @Override
     public String toString() {
         return "Trainee{" +

@@ -78,7 +78,7 @@ public class GymServices {
         trainerService.update(username, password, t);
     }
 
-    public void deleteTrainee(String username, String password){
+    public void deleteTraineeOLD(String username, String password){
         traineeService.delete(username, password);
     }
 

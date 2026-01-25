@@ -1,5 +1,7 @@
 package com.gym.system.service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
@@ -127,10 +129,17 @@ public class TrainingService {
     public List<Training> findTrainingsByTraineeUsername(String username, String password, String fromDate, String toDate, String trainerName, String trainingType){
         logger.info("Service: Fetching trainings for trainee {}", username);
 
-        Boolean isAuthenticated = traineeService.authenticate(username, password);
+        boolean isAuthenticated = traineeService.authenticate(username, password);
 
         if(isAuthenticated){
-            return trainingDAO.findTrainingsByTraineeUsername(username, fromDate, toDate, trainerName, trainingType);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            LocalDateTime formattedFromDate = LocalDateTime.parse(fromDate, formatter);
+            LocalDateTime formattedToDate = LocalDateTime.parse(toDate, formatter);
+            if(formattedFromDate.isAfter(formattedToDate)) {
+                throw new IllegalArgumentException("Invalid date range");
+            }else {
+                return trainingDAO.findTrainingsByTraineeUsername(username, fromDate, toDate, trainerName, trainingType);
+            }
         }else{
             throw new IllegalArgumentException("Invalid credentials");
         }
@@ -139,10 +148,17 @@ public class TrainingService {
     public List<Training> findTrainingsByTrainerUsername(String username, String password, String fromDate, String toDate, String traineeName, String trainingType){
         logger.info("Service: Fetching trainings for trainer {}", username);
 
-        Boolean isAuthenticated = trainerService.authenticate(username, password);
+        boolean isAuthenticated = trainerService.authenticate(username, password);
 
         if(isAuthenticated){
-            return trainingDAO.findTrainingsByTrainerUsername(username, fromDate, toDate, traineeName, trainingType);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            LocalDateTime formattedFromDate = LocalDateTime.parse(fromDate, formatter);
+            LocalDateTime formattedToDate = LocalDateTime.parse(toDate, formatter);
+            if(formattedFromDate.isAfter(formattedToDate)) {
+                throw new IllegalArgumentException("Invalid date range");
+            }else {
+                return trainingDAO.findTrainingsByTrainerUsername(username, fromDate, toDate, traineeName, trainingType);
+            }
         }else{
             throw new IllegalArgumentException("Invalid credentials");
         }
@@ -150,7 +166,7 @@ public class TrainingService {
 
     public List<Trainer> findUnassignedTrainers(String username, String password){
         logger.info("Service: Retrieving unassigned trainers");
-        Boolean isAuthenticated = traineeService.authenticate(username, password);
+        boolean isAuthenticated = traineeService.authenticate(username, password);
 
         if(isAuthenticated){
             return trainingDAO.findUnassignedTrainers(username);
@@ -179,7 +195,7 @@ public class TrainingService {
 
     public Optional<Training> findByTraineeUsernameAndDate(String username, String password, String date){
         logger.info("Service: Fetching training for trainee {} on date {}", username, date);
-        Boolean isAuthenticated = AuthService.authenticate(username, password);
+        boolean isAuthenticated = AuthService.authenticate(username, password);
 
         if(isAuthenticated){
             return trainingDAO.findByTraineeUsernameAndDate(username, date);

@@ -9,6 +9,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gym.system.exception.GlobalExceptionHandler;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -25,6 +27,7 @@ import com.gym.system.dto.TraineeProfileRequest;
 import com.gym.system.dto.TraineeProfileResponse;
 import com.gym.system.dto.TraineeTrainersList;
 import com.gym.system.service.GymServices;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 public class GetTraineeControllerTest {
     private MockMvc mockMvc;
@@ -40,11 +43,16 @@ public class GetTraineeControllerTest {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+
         MappingJackson2HttpMessageConverter jacksonConverter = new MappingJackson2HttpMessageConverter(objectMapper);
 
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
                 .setMessageConverters(jacksonConverter)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setValidator(validator)
                 .build();
     }
 
@@ -53,6 +61,7 @@ public class GetTraineeControllerTest {
         // Arrange
         TraineeProfileRequest request = new TraineeProfileRequest();
         request.setUsername("Julio.Domingo");
+        request.setPassword("pass1234566");
 
         TraineeProfileResponse response = new TraineeProfileResponse();
         response.setFirstName("Julio");
@@ -82,5 +91,52 @@ public class GetTraineeControllerTest {
                 .andExpect(jsonPath("$.dateOfBirth").value("2000-12-12"))
                 .andExpect(jsonPath("$.isActive").value(true))
                 .andExpect(jsonPath("$.trainers.length()").value(1));
+    }
+
+    @Test
+    void shouldReturn400_WhenPasswordIsMissing() throws Exception {
+
+        TraineeProfileRequest request = new TraineeProfileRequest();
+        request.setUsername("Julio.Domingo");
+
+        mockMvc.perform(
+                        get("/getTrainee")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn400_WhenCredentialsAreInvalid() throws Exception {
+
+        TraineeProfileRequest request = new TraineeProfileRequest();
+        request.setUsername("Julio.Domingo");
+        request.setPassword("wrongPassword");
+
+        when(facade.getTrainee(Mockito.any()))
+                .thenThrow(new IllegalArgumentException("Invalid credentials"));
+
+        mockMvc.perform(
+                        get("/getTrainee")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn404_WhenTraineeDoesNotExist() throws Exception {
+
+        TraineeProfileRequest request = new TraineeProfileRequest();
+        request.setUsername("Unknown.User");
+        request.setPassword("pass1234566");
+
+        when(facade.getTrainee(Mockito.any()))
+                .thenThrow(new EntityNotFoundException("Trainee not found"));
+
+        mockMvc.perform(
+                        get("/getTrainee")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
     }
 }

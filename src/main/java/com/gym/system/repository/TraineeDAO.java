@@ -21,49 +21,60 @@ public class TraineeDAO {
 
     private static final Logger logger = LoggerFactory.getLogger(TraineeDAO.class);
 
-    @Autowired
     public TraineeDAO() {
     }
 
-    public void save(Trainee trainee){
+    public void save(Trainee trainee) {
         logger.debug("Saving trainee in Database {}", trainee.getUsername());
         em.persist(trainee);
         em.flush();
     }
 
-    public Trainee update(Trainee trainee){
+    public Trainee update(Trainee trainee) {
         logger.debug("Updating trainee {}", trainee.getUsername());
         return em.merge(trainee);
     }
 
-    public void delete(String username){
+    public void delete(String username) {
         logger.debug("Deleting trainee {}", username);
         em.createQuery(
-        "SELECT t FROM Trainee t WHERE t.username = :username",
-        Trainee.class
-        )
-        .setParameter("username", username)
-        .getResultStream()
-        .findFirst()
-        .ifPresent(em::remove);
+                    "SELECT t FROM Trainee t WHERE t.username = :username",
+                    Trainee.class
+            )
+            .setParameter("username", username)
+            .getResultStream()
+            .findFirst()
+            .ifPresent(trainee -> {
+
+                trainee.getTrainers().forEach(trainer ->
+                        trainer.getTrainees().remove(trainee)
+                );
+
+                trainee.getTrainings().forEach(Training ->
+                        em.remove(Training)
+                );
+
+                trainee.getTrainers().clear();
+                em.remove(trainee);
+            });
     }
 
-    public void updateTrainersList(Trainer trainer, String username){
+    public void updateTrainersList(Trainer trainer, String username) {
         Trainee trainee = em.createQuery(
-            "SELECT t FROM Trainee t WHERE t.username = :username",
-            Trainee.class
-        ).setParameter("username", username)
-        .getSingleResult();
+                        "SELECT t FROM Trainee t WHERE t.username = :username",
+                        Trainee.class
+                ).setParameter("username", username)
+                .getSingleResult();
 
         trainee.getTrainers().add(trainer);
     }
 
-    public void updateTraineeTrainersList(String username, List<Trainer> trainers){
+    public void updateTraineeTrainersList(String username, List<Trainer> trainers) {
         Trainee trainee = em.createQuery(
-            "SELECT t FROM Trainee t WHERE t.username = :username",
-            Trainee.class
-        ).setParameter("username", username)
-        .getSingleResult();
+                        "SELECT t FROM Trainee t WHERE t.username = :username",
+                        Trainee.class
+                ).setParameter("username", username)
+                .getSingleResult();
 
         trainee.setTrainers(trainers);
     }
@@ -71,10 +82,10 @@ public class TraineeDAO {
     public boolean toggleTraineeStatus(String username) {
 
         Trainee trainee = em.createQuery(
-            "SELECT t FROM Trainee t WHERE t.username = :username",
-            Trainee.class
-        ).setParameter("username", username)
-        .getSingleResult();
+                        "SELECT t FROM Trainee t WHERE t.username = :username",
+                        Trainee.class
+                ).setParameter("username", username)
+                .getSingleResult();
 
         trainee.setIsActive(!trainee.getIsActive());
 
@@ -84,28 +95,28 @@ public class TraineeDAO {
     public Boolean activateDeactivateTrainee(String username, Boolean isActive) {
 
         Trainee trainee = em.createQuery(
-            "SELECT t FROM Trainee t WHERE t.username = :username",
-            Trainee.class
-        ).setParameter("username", username)
-        .getSingleResult();
+                        "SELECT t FROM Trainee t WHERE t.username = :username",
+                        Trainee.class
+                ).setParameter("username", username)
+                .getSingleResult();
 
         trainee.setIsActive(isActive);
 
         return true;
     }
 
-    public Optional<Trainee> findByUsername(String username){
+    public Optional<Trainee> findByUsername(String username) {
         logger.info("Finding trainee {}", username);
         return em.createQuery(
-            "SELECT t FROM Trainee t WHERE LOWER(t.username) = LOWER(:username)",
-            Trainee.class
-        )
-        .setParameter("username", username)
-        .getResultStream()
-        .findFirst();
+                        "SELECT t FROM Trainee t WHERE LOWER(t.username) = LOWER(:username)",
+                        Trainee.class
+                )
+                .setParameter("username", username)
+                .getResultStream()
+                .findFirst();
     }
 
-    public List<Trainee> findAll(){
+    public List<Trainee> findAll() {
         return em.createQuery(
                 "SELECT t FROM Trainee t",
                 Trainee.class

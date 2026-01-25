@@ -8,6 +8,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gym.system.exception.GlobalExceptionHandler;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -23,6 +25,7 @@ import com.gym.system.dto.TraineeTrainersList;
 import com.gym.system.dto.UpdateTraineeRequest;
 import com.gym.system.dto.UpdateTraineeResponse;
 import com.gym.system.service.GymServices;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 public class UpdateTraineeControllerTest {
     private MockMvc mockMvc;
@@ -35,8 +38,13 @@ public class UpdateTraineeControllerTest {
         UpdateTraineeController controller =
                 new UpdateTraineeController(facade);
 
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setValidator(validator)
                 .build();
 
         objectMapper = new ObjectMapper();
@@ -77,4 +85,79 @@ public class UpdateTraineeControllerTest {
         )
         .andExpect(status().isOk());
     }
+
+    @Test
+    void shouldReturn400_WhenUsernameIsMissing() throws Exception {
+
+        UpdateTraineeRequest request = new UpdateTraineeRequest();
+        request.setFirstName("Roberto");
+        request.setLastName("Cavalli");
+        request.setIsActive(true);
+
+        mockMvc.perform(
+                        put("/updateTrainee")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn400_WhenFirstNameIsMissing() throws Exception {
+
+        UpdateTraineeRequest request = new UpdateTraineeRequest();
+        request.setUsername("Roberto.Cavalli");
+        request.setLastName("Cavalli");
+        request.setIsActive(true);
+
+        mockMvc.perform(
+                        put("/updateTrainee")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn404_WhenTraineeDoesNotExist() throws Exception {
+
+        UpdateTraineeRequest request = new UpdateTraineeRequest();
+        request.setUsername("Unknown.User");
+        request.setFirstName("Roberto");
+        request.setLastName("Cavalli");
+        request.setIsActive(true);
+
+        when(facade.updateTrainee(Mockito.any()))
+                .thenThrow(new EntityNotFoundException("Trainee not found"));
+
+        mockMvc.perform(
+                        put("/updateTrainee")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldReturn400_WhenDateFormatIsInvalid() throws Exception {
+
+        String invalidJson = """
+        {
+          "username": "Roberto.Cavalli",
+          "firstName": "Roberto",
+          "lastName": "Cavalli",
+          "isActive": true,
+          "dateOfBirth": "19-09-2000"
+        }
+        """;
+
+        mockMvc.perform(
+                        put("/updateTrainee")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(invalidJson)
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+
 }

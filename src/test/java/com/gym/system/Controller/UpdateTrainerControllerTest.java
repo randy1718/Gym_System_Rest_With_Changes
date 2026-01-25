@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gym.system.exception.GlobalExceptionHandler;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -22,6 +24,7 @@ import com.gym.system.dto.TrainerTraineesList;
 import com.gym.system.dto.UpdateTrainerRequest;
 import com.gym.system.dto.UpdateTrainerResponse;
 import com.gym.system.service.GymServices;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 public class UpdateTrainerControllerTest {
     private MockMvc mockMvc;
@@ -34,8 +37,13 @@ public class UpdateTrainerControllerTest {
         UpdateTrainerController controller =
                 new UpdateTrainerController(facade);
 
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setValidator(validator)
                 .build();
 
         objectMapper = new ObjectMapper();
@@ -72,5 +80,68 @@ public class UpdateTrainerControllerTest {
                         .content(objectMapper.writeValueAsString(request))
         )
         .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldReturn400_WhenUsernameIsMissing() throws Exception {
+        // Arrange
+        UpdateTrainerRequest request = new UpdateTrainerRequest();
+        request.setFirstName("Alfredo");
+        request.setLastName("Cavalli");
+        request.setSpecialization("Cardio");
+        request.setIsActive(true);
+        // username is missing
+
+        // Act + Assert
+        mockMvc.perform(
+                        put("/updateTrainer")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn404_WhenTrainerDoesNotExist() throws Exception {
+        // Arrange
+        UpdateTrainerRequest request = new UpdateTrainerRequest();
+        request.setUsername("Non.Existing.Trainer");
+        request.setFirstName("Alfredo");
+        request.setLastName("Cavalli");
+        request.setSpecialization("Cardio");
+        request.setIsActive(true);
+
+        when(facade.updateTrainer(Mockito.any()))
+                .thenThrow(new EntityNotFoundException("Trainer not found"));
+
+        // Act + Assert
+        mockMvc.perform(
+                        put("/updateTrainer")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldReturn404_WhenSpecializationDoesNotExist() throws Exception {
+        // Arrange
+        UpdateTrainerRequest request = new UpdateTrainerRequest();
+        request.setUsername("Alfredo.Cavalli");
+        request.setFirstName("Alfredo");
+        request.setLastName("Cavalli");
+        request.setSpecialization("AlienTraining"); // invalid specialization
+        request.setIsActive(true);
+
+        when(facade.updateTrainer(Mockito.any()))
+                .thenThrow(new jakarta.persistence.EntityNotFoundException("Training type not found"));
+
+        // Act + Assert
+        mockMvc.perform(
+                        put("/updateTrainer")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isNotFound());
     }
 }

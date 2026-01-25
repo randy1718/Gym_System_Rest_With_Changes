@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gym.system.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -18,6 +19,7 @@ import com.gym.system.controller.GetTrainingTypesController;
 import com.gym.system.dto.TrainingTypesResponse;
 import com.gym.system.model.TrainingType;
 import com.gym.system.service.GymServices;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 public class GetTrainingTypesControllerTest {
 
@@ -30,8 +32,13 @@ public class GetTrainingTypesControllerTest {
         GetTrainingTypesController controller =
                 new GetTrainingTypesController(facade);
 
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setValidator(validator)
                 .build();
     }
 
@@ -69,5 +76,15 @@ public class GetTrainingTypesControllerTest {
         .andExpect(jsonPath("$.trainingTypes[0].name").value("Cardio"))
         .andExpect(jsonPath("$.trainingTypes[1].name").value("Stregth"))
         .andExpect(jsonPath("$.trainingTypes[2].name").value("Crossfit"));
+    }
+
+    @Test
+    void shouldReturn500_WhenUnexpectedErrorOccurs() throws Exception {
+
+        when(facade.getTrainingTypes())
+                .thenThrow(new RuntimeException("DB error"));
+
+        mockMvc.perform(get("/trainingTypes"))
+                .andExpect(status().isInternalServerError());
     }
 }

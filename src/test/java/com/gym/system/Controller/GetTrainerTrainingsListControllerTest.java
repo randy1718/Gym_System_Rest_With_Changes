@@ -5,9 +5,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gym.system.exception.GlobalExceptionHandler;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -23,6 +26,7 @@ import com.gym.system.dto.TrainerTrainingList;
 import com.gym.system.dto.TrainerTrainingsListRequest;
 import com.gym.system.dto.TrainerTrainingsListResponse;
 import com.gym.system.service.GymServices;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 public class GetTrainerTrainingsListControllerTest {
     private MockMvc mockMvc;
@@ -35,9 +39,15 @@ public class GetTrainerTrainingsListControllerTest {
         GetTrainerTrainingsListController controller =
                 new GetTrainerTrainingsListController(facade);
 
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setValidator(validator)
                 .build();
+
 
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
@@ -49,8 +59,8 @@ public class GetTrainerTrainingsListControllerTest {
 
         TrainerTrainingsListRequest request = new TrainerTrainingsListRequest();
         request.setUsername("Camilo.Diaz");
-        request.setFrom("2024-01-01");
-        request.setTo("2025-12-31");
+        request.setFrom(LocalDate.of(2024, 1, 1));
+        request.setTo(LocalDate.of(2025, 12, 31));
         request.setTraineeName("Veronica Leon");
 
         TrainerTrainingsListResponse response = new TrainerTrainingsListResponse();
@@ -78,5 +88,56 @@ public class GetTrainerTrainingsListControllerTest {
         .andExpect(jsonPath("$.trainings[0].traineeName").value("Veronica Leon"))
         .andExpect(jsonPath("$.trainings[0].trainingDate").value("2024-05-20"))
         .andExpect(jsonPath("$.trainings[0].duration").value(60));
+    }
+
+    @Test
+    void shouldReturn400_WhenUsernameIsMissing() throws Exception {
+
+        TrainerTrainingsListRequest request = new TrainerTrainingsListRequest();
+        request.setFrom(LocalDate.of(2024, 1, 1));
+        request.setTo(LocalDate.of(2025, 12, 31));
+
+        mockMvc.perform(
+                        get("/getTrainerTrainingsList")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn400_WhenFromDateIsAfterToDate() throws Exception {
+
+        TrainerTrainingsListRequest request = new TrainerTrainingsListRequest();
+        request.setUsername("Camilo.Diaz");
+        request.setFrom(LocalDate.of(2025, 12, 31));
+        request.setTo(LocalDate.of(2024, 1, 1));
+
+        when(facade.getTrainerTrainingsList(Mockito.any()))
+                .thenThrow(new IllegalArgumentException("Invalid date range"));
+
+        mockMvc.perform(
+                        get("/getTrainerTrainingsList")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn404_WhenTrainerDoesNotExist() throws Exception {
+
+        TrainerTrainingsListRequest request = new TrainerTrainingsListRequest();
+        request.setUsername("Unknown.Trainer");
+
+        when(facade.getTrainerTrainingsList(Mockito.any()))
+                .thenThrow(new EntityNotFoundException("Trainer not found"));
+
+        mockMvc.perform(
+                        get("/getTrainerTrainingsList")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isNotFound());
     }
 }

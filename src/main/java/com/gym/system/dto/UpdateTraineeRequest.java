@@ -22,7 +22,7 @@ public class UpdateTraineeRequest {
     private String address;
 
     @NotNull
-    private Boolean isActive;
+    private boolean isActive;
 
     public String getFirstName() {
         return firstName;
@@ -69,11 +69,11 @@ public class UpdateTraineeRequest {
         this.username = username;
     }
 
-    public Boolean getIsActive() {
+    public boolean getIsActive() {
         return isActive;
     }
 
-    public void setIsActive(Boolean isActive) {
+    public void setIsActive(boolean isActive) {
         this.isActive = isActive;
     }
 }

@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gym.system.controller.TraineeRegistrationController;
 import com.gym.system.dto.TraineeRegistrationRequest;
 import com.gym.system.dto.TraineeRegistrationResponse;
+import com.gym.system.exception.GlobalExceptionHandler;
 import com.gym.system.service.GymServices;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,7 @@ import org.mockito.Mockito;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 class CreateTraineeControllerTest {
 
@@ -27,11 +29,17 @@ class CreateTraineeControllerTest {
     @BeforeEach
     void setup() {
         facade = Mockito.mock(GymServices.class);
+
         TraineeRegistrationController controller =
                 new TraineeRegistrationController(facade);
 
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setValidator(validator)
                 .build();
 
         objectMapper = new ObjectMapper();
@@ -60,5 +68,49 @@ class CreateTraineeControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.username").value("Lucas.Diaz"))
         .andExpect(jsonPath("$.password").value("Abc1234567"));
+    }
+
+    @Test
+    void shouldReturn400_WhenFirstNameIsMissing() throws Exception {
+        // Arrange
+        TraineeRegistrationRequest request = new TraineeRegistrationRequest();
+        request.setLastName("Diaz"); // firstName missing
+
+        // Act + Assert
+        mockMvc.perform(
+                        post("/traineeRegistration")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn400_WhenRequestBodyIsEmpty() throws Exception {
+        mockMvc.perform(
+                        post("/traineeRegistration")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}")
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn500_WhenUnexpectedErrorOccurs() throws Exception {
+        // Arrange
+        TraineeRegistrationRequest request = new TraineeRegistrationRequest();
+        request.setFirstName("Lucas");
+        request.setLastName("Diaz");
+
+        when(facade.createTrainee(Mockito.any()))
+                .thenThrow(new RuntimeException("DB down"));
+
+        // Act + Assert
+        mockMvc.perform(
+                        post("/traineeRegistration")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isInternalServerError());
     }
 }

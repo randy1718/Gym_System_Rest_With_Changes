@@ -62,7 +62,7 @@ public class TrainerService {
         Trainer trainer = trainerDAO.findByUsername(username)
             .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        Boolean isAuthenticated = authenticate(username, oldPassword);
+        boolean isAuthenticated = authenticate(username, oldPassword);
 
         if(isAuthenticated){
             trainer.setPassword(newPassword);
@@ -75,7 +75,7 @@ public class TrainerService {
         Trainer trainer = trainerDAO.findByUsername(username)
             .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        Boolean isAuthenticated = authenticate(username, password);
+        boolean isAuthenticated = authenticate(username, password);
 
         if(isAuthenticated){
             trainerDAO.toggleTrainerStatus(username);
@@ -105,23 +105,30 @@ public class TrainerService {
         Trainer trainer = trainerDAO.findByUsername(request.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        TrainerProfileResponse response = new TrainerProfileResponse();
-        response.setFirstName(trainer.getFirstName());
-        response.setLastName(trainer.getLastName());
-        response.setSpecialization(trainer.getSpecialization().getName());
-        response.setIsActive(trainer.getIsActive());
-        List<TrainerTraineesList> trainees = trainer.getTrainees().stream()
-        .map(t -> {
-            TrainerTraineesList dto = new TrainerTraineesList();
-            dto.setUsername(t.getUsername());
-            dto.setFirstName(t.getFirstName());
-            dto.setLastName(t.getLastName());
-            return dto;
-        })
-        .toList();
-        response.setTrainees(trainees);
+        boolean isAuthenticated = authenticate(request.getUsername(), request.getPassword());
 
-        return response;
+        if(isAuthenticated) {
+
+            TrainerProfileResponse response = new TrainerProfileResponse();
+            response.setFirstName(trainer.getFirstName());
+            response.setLastName(trainer.getLastName());
+            response.setSpecialization(trainer.getSpecialization().getName());
+            response.setIsActive(trainer.getIsActive());
+            List<TrainerTraineesList> trainees = trainer.getTrainees().stream()
+                    .map(t -> {
+                        TrainerTraineesList dto = new TrainerTraineesList();
+                        dto.setUsername(t.getUsername());
+                        dto.setFirstName(t.getFirstName());
+                        dto.setLastName(t.getLastName());
+                        return dto;
+                    })
+                    .toList();
+            response.setTrainees(trainees);
+
+            return response;
+        }else{
+            throw new IllegalArgumentException("Invalid credentials");
+        }
     }
 
     public UpdateTrainerResponse updateTrainerProfile(UpdateTrainerRequest request){
@@ -161,7 +168,7 @@ public class TrainerService {
     public void update(String username, String password, Trainer t){
         logger.info("Service: Updating trainer with id {}", t.getId());
 
-        Boolean isAuthenticated = authenticate(username, password);
+        boolean isAuthenticated = authenticate(username, password);
 
         if(isAuthenticated){
             trainerDAO.update(t);
@@ -173,7 +180,7 @@ public class TrainerService {
     public Optional<Trainer> findByUsername(String username, String password){
         logger.info("Service: Finding trainer with username {}", username);
 
-        Boolean isAuthenticated = authenticate(username, password);
+        boolean isAuthenticated = authenticate(username, password);
 
         if(isAuthenticated){
             return trainerDAO.findByUsername(username);
@@ -182,7 +189,7 @@ public class TrainerService {
         }  
     }
 
-    public Boolean activateDeactivateTrainer(ActivateDeactivateTrainerRequest request){
+    public boolean activateDeactivateTrainer(ActivateDeactivateTrainerRequest request){
         logger.info("Service: Activating/Deactivating trainer {}", request.getUsername());
 
         Trainer trainer = trainerDAO.findByUsername(request.getUsername())

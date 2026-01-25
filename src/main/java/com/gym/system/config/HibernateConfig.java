@@ -54,27 +54,4 @@ public class HibernateConfig {
             EntityManagerFactory emf) {
         return new JpaTransactionManager(emf);
     }
-
-    /*
-     * @Bean
-     * public LocalSessionFactoryBean sessionFactory() {
-     * LocalSessionFactoryBean factory = new LocalSessionFactoryBean();
-     * factory.setDataSource(dataSource());
-     * factory.setPackagesToScan("com.gym.system.model");
-     * 
-     * Properties props = new Properties();
-     * props.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
-     * props.put("hibernate.show_sql", "true");
-     * props.put("hibernate.hbm2ddl.auto", "update");
-     * 
-     * factory.setHibernateProperties(props);
-     * return factory;
-     * }
-     * 
-     * @Bean
-     * public HibernateTransactionManager transactionManager(
-     * SessionFactory sessionFactory) {
-     * return new HibernateTransactionManager(sessionFactory);
-     * }
-     */
 }

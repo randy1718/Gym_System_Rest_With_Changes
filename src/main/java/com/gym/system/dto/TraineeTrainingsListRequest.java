@@ -2,13 +2,15 @@ package com.gym.system.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
+import java.time.LocalDate;
+
 public class TraineeTrainingsListRequest {
     @NotBlank
     private String username;
 
-    private String from;
+    private LocalDate from;
 
-    private String to;
+    private LocalDate to;
 
     private String trainerName;
 
@@ -22,19 +24,19 @@ public class TraineeTrainingsListRequest {
         this.username = username;
     }
 
-    public String getFrom(){
+    public LocalDate getFrom(){
         return from;
     }
 
-    public void setFrom(String from){
+    public void setFrom(LocalDate from){
         this.from = from;
     }
 
-    public String getTo(){
+    public LocalDate getTo(){
         return to;
     }
 
-    public void setTo(String to){
+    public void setTo(LocalDate to){
         this.to = to;
     }
 

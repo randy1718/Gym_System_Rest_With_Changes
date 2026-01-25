@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gym.system.controller.TrainerRegistrationController;
 import com.gym.system.dto.TrainerRegistrationRequest;
 import com.gym.system.dto.TrainerRegistrationResponse;
+import com.gym.system.exception.GlobalExceptionHandler;
 import com.gym.system.service.GymServices;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,7 @@ import org.mockito.Mockito;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 class CreateTrainerControllerTest {
 
@@ -30,8 +32,13 @@ class CreateTrainerControllerTest {
         TrainerRegistrationController controller =
                 new TrainerRegistrationController(facade);
 
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
+
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setValidator(validator)
                 .build();
 
         objectMapper = new ObjectMapper();
@@ -43,6 +50,7 @@ class CreateTrainerControllerTest {
         TrainerRegistrationRequest request = new TrainerRegistrationRequest();
         request.setFirstName("Mario");
         request.setLastName("Hernandez");
+        request.setSpecializationName("Cardio");
 
         TrainerRegistrationResponse response = new TrainerRegistrationResponse();
         response.setUsername("Mario.Hernandez");
@@ -60,5 +68,54 @@ class CreateTrainerControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.username").value("Mario.Hernandez"))
         .andExpect(jsonPath("$.password").value("1234567qasdAS"));
+    }
+
+    @Test
+    void shouldReturn400_WhenFirstNameIsMissing() throws Exception {
+
+        TrainerRegistrationRequest request = new TrainerRegistrationRequest();
+        request.setLastName("Hernandez");
+        request.setSpecializationName("Cardio");
+
+        mockMvc.perform(
+                        post("/trainerRegistration")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn400_WhenSpecializationIsMissing() throws Exception {
+
+        TrainerRegistrationRequest request = new TrainerRegistrationRequest();
+        request.setFirstName("Mario");
+        request.setLastName("Hernandez");
+
+        mockMvc.perform(
+                        post("/trainerRegistration")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn400_WhenSpecializationDoesNotExist() throws Exception {
+
+        TrainerRegistrationRequest request = new TrainerRegistrationRequest();
+        request.setFirstName("Mario");
+        request.setLastName("Hernandez");
+        request.setSpecializationName("UnknownType");
+
+        when(facade.createTrainer(Mockito.any()))
+                .thenThrow(new IllegalArgumentException("Invalid specialization"));
+
+        mockMvc.perform(
+                        post("/trainerRegistration")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isBadRequest());
     }
 }
